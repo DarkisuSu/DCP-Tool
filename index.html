@@ -4,52 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hello World | DCP Tool</title>
-    <meta name="description" content="A premium, interactive, and visually stunning Hello World experience hosted on GitHub Pages for the DCP Tool project.">
+    <meta name="description" content="A ultra-high performance, minimalist developer Hello World dashboard for the DCP Tool.">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
     <!-- Main Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Background Glow Effects -->
-    <div class="glow-container">
-        <div class="glow-orb orb-1"></div>
-        <div class="glow-orb orb-2"></div>
-        <div class="glow-orb orb-3"></div>
-    </div>
-
     <!-- Main Container -->
     <main class="app-container">
-        <div class="glass-card" id="main-card">
+        <div class="minimal-card" id="main-card">
             <!-- Header Section -->
             <header class="card-header">
                 <div class="status-indicator">
-                    <span class="status-dot pulsed"></span>
+                    <span class="status-dot"></span>
                     <span class="status-text" id="status-text">SYSTEM ONLINE</span>
                 </div>
-                <div class="badge">GITHUB PAGES</div>
+                <div class="badge">DCP-TOOL</div>
             </header>
 
             <!-- Hero Section -->
             <section class="hero-section">
                 <div class="title-wrapper">
-                    <span class="text-gradient dynamic-greet" id="greeting-title">Hello, World!</span>
+                    <h1 class="title dynamic-greet" id="greeting-title">Hello, World!</h1>
                 </div>
-                <p class="subtitle">Welcome to the future home of <span class="highlight">DCP-Tool</span>. This is an interactive portal designed to celebrate deployment and explore creative engineering.</p>
+                <p class="subtitle">Welcome to the minimalist home of <span class="highlight">DCP-Tool</span>. This interface is optimized for zero-GPU overhead and maximum performance.</p>
             </section>
 
             <!-- Dynamic Interactive Area -->
             <section class="interactive-section">
-                <button class="btn btn-primary" id="btn-interact">
+                <button class="btn btn-outline" id="btn-interact">
                     <span class="btn-content">
                         <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polygon points="5 3 19 12 5 21 5 3"></polygon>
                         </svg>
                         <span id="btn-text">Initiate Greeting Pulse</span>
                     </span>
-                    <span class="btn-glow"></span>
                 </button>
 
                 <div class="pulse-counter" id="pulse-counter-container" style="display: none;">
@@ -78,12 +70,12 @@
                         <span class="diag-value" id="diag-platform">Web Browser</span>
                     </div>
                     <div class="diag-item">
-                        <span class="diag-label">DEPLOY_TYPE</span>
-                        <span class="diag-value">GitHub Pages</span>
+                        <span class="diag-label">ENGINE_STATE</span>
+                        <span class="diag-value text-success">Zero GPU Overhead</span>
                     </div>
                     <div class="diag-item">
                         <span class="diag-label">STATUS</span>
-                        <span class="diag-value success">Active</span>
+                        <span class="diag-value text-success">Ready</span>
                     </div>
                 </div>
             </section>
@@ -92,11 +84,8 @@
 
     <!-- Footer -->
     <footer class="app-footer">
-        <p>&copy; 2026 DCP-Tool. Crafted with pride on <a href="https://github.com/DarkisuSu/DCP-Tool" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub Pages</a>.</p>
+        <p>&copy; 2026 DCP-Tool. Hosted on <a href="https://github.com/DarkisuSu/DCP-Tool" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub Pages</a>.</p>
     </footer>
-
-    <!-- Canvas for Particle Effects -->
-    <canvas id="particles-canvas"></canvas>
 
     <!-- JavaScript Bundle -->
     <script src="script.js"></script>
