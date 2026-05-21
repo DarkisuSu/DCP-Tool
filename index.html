@@ -3,96 +3,256 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Turn Off Browser Caching -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-
-    <title>Hello World | DCP Tool</title>
-    <meta name="description" content="A ultra-high performance, minimalist developer Hello World dashboard for the DCP Tool.">
-    <!-- Google Fonts -->
+    <title>DCP Raw Profile Editor | DCP Tool</title>
+    <meta name="description" content="Interactive DCP profile workspace with split preview, style delta simulation, and synchronized pan and zoom controls.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Main Stylesheet (with Cache Busting) -->
-    <link rel="stylesheet" href="style.css?v=1.0.2">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=2.0.0">
 </head>
 <body>
-    <!-- Main Container -->
-    <main class="app-container">
-        <div class="minimal-card" id="main-card">
-            <!-- Header Section -->
-            <header class="card-header">
-                <div class="status-indicator">
-                    <span class="status-dot"></span>
-                    <span class="status-text" id="status-text">SYSTEM ONLINE</span>
+    <main class="workspace-shell">
+        <aside class="sidebar-panel">
+            <header class="sidebar-header">
+                <div class="brand-block">
+                    <div class="brand-mark">DCP</div>
+                    <div>
+                        <p class="eyebrow">Raw Profile Lab</p>
+                        <h1>DCP Preview Studio</h1>
+                    </div>
                 </div>
-                <div class="badge">DCP-TOOL</div>
+                <div class="status-cluster">
+                    <div class="status-pill">
+                        <span class="status-dot"></span>
+                        <span id="status-text">SIMULATION READY</span>
+                    </div>
+                    <div class="active-set-pill" id="active-set-pill">SET A ACTIVE</div>
+                </div>
             </header>
 
-            <!-- Hero Section -->
-            <section class="hero-section">
-                <div class="title-wrapper">
-                    <h1 class="title dynamic-greet" id="greeting-title">Hello, World!</h1>
+            <section class="panel-section">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Profile Workflow</p>
+                        <h2>DCP Slots</h2>
+                    </div>
+                    <span class="micro-note">4 sources tracked</span>
                 </div>
-                <p class="subtitle">Welcome to the minimalist home of <span class="highlight">DCP-Tool</span>. This interface is optimized for zero-GPU overhead and maximum performance.</p>
+
+                <div class="slot-group">
+                    <div class="group-label">
+                        <span>SET A</span>
+                        <small>Delta References</small>
+                    </div>
+                    <div class="dropzone-grid">
+                        <label class="dropzone-card" for="slot-a-original-input" data-slot="a-original">
+                            <input id="slot-a-original-input" class="visually-hidden" type="file" accept=".dcp">
+                            <span class="dropzone-label">Reference Original</span>
+                            <span class="dropzone-subtitle">Standard source profile</span>
+                            <span class="dropzone-file" id="slot-a-original-name">Drop or click to load .dcp</span>
+                        </label>
+                        <label class="dropzone-card" for="slot-a-stylish-input" data-slot="a-stylish">
+                            <input id="slot-a-stylish-input" class="visually-hidden" type="file" accept=".dcp">
+                            <span class="dropzone-label">Reference Stylish</span>
+                            <span class="dropzone-subtitle">Edited source profile</span>
+                            <span class="dropzone-file" id="slot-a-stylish-name">Drop or click to load .dcp</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="slot-group">
+                    <div class="group-label">
+                        <span>SET B</span>
+                        <small>Target Generation</small>
+                    </div>
+                    <div class="dropzone-grid">
+                        <label class="dropzone-card" for="slot-b-base-input" data-slot="b-base">
+                            <input id="slot-b-base-input" class="visually-hidden" type="file" accept=".dcp">
+                            <span class="dropzone-label">Base Target</span>
+                            <span class="dropzone-subtitle">Standard target profile</span>
+                            <span class="dropzone-file" id="slot-b-base-name">Drop or click to load .dcp</span>
+                        </label>
+                        <label class="dropzone-card" for="slot-b-generated-input" data-slot="b-generated">
+                            <input id="slot-b-generated-input" class="visually-hidden" type="file" accept=".dcp">
+                            <span class="dropzone-label">Generated Target</span>
+                            <span class="dropzone-subtitle">Future output profile</span>
+                            <span class="dropzone-file" id="slot-b-generated-name">Simulated by style delta for now</span>
+                        </label>
+                    </div>
+                </div>
             </section>
 
-            <!-- Dynamic Interactive Area -->
-            <section class="interactive-section">
-                <button class="btn btn-outline" id="btn-interact">
-                    <span class="btn-content">
-                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                        </svg>
-                        <span id="btn-text">Initiate Greeting Pulse</span>
-                    </span>
-                </button>
+            <section class="panel-section">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Preview Source</p>
+                        <h2>Raw / Image Input</h2>
+                    </div>
+                    <span class="micro-note">Browser-safe preview</span>
+                </div>
 
-                <div class="pulse-counter" id="pulse-counter-container" style="display: none;">
-                    Greeting Pulses: <span class="counter-val" id="counter-val">0</span>
+                <label class="image-dropzone" for="preview-image-input" id="image-dropzone">
+                    <input id="preview-image-input" class="visually-hidden" type="file" accept="image/*,.dng,.cr2,.cr3,.nef,.arw,.raf,.orf,.rw2">
+                    <span class="dropzone-label">Drop preview image here</span>
+                    <span class="dropzone-subtitle">Use JPEG, PNG, WebP, SVG, or any browser-decodable raw export.</span>
+                    <span class="dropzone-file" id="image-file-name">No preview image loaded yet.</span>
+                </label>
+            </section>
+
+            <section class="panel-section">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Simulation</p>
+                        <h2>Style Delta Sliders</h2>
+                    </div>
+                    <span class="micro-note">Lower slice only</span>
+                </div>
+
+                <div class="slider-stack">
+                    <label class="slider-row" for="slider-exposure">
+                        <div class="slider-copy">
+                            <span>Exposure Delta</span>
+                            <output id="slider-exposure-value">+0.00 EV</output>
+                        </div>
+                        <input id="slider-exposure" type="range" min="-2" max="2" step="0.05" value="0.25">
+                    </label>
+                    <label class="slider-row" for="slider-contrast">
+                        <div class="slider-copy">
+                            <span>Contrast Delta</span>
+                            <output id="slider-contrast-value">+8</output>
+                        </div>
+                        <input id="slider-contrast" type="range" min="-50" max="50" step="1" value="8">
+                    </label>
+                    <label class="slider-row" for="slider-saturation">
+                        <div class="slider-copy">
+                            <span>Saturation Offset</span>
+                            <output id="slider-saturation-value">+12</output>
+                        </div>
+                        <input id="slider-saturation" type="range" min="-50" max="50" step="1" value="12">
+                    </label>
+                    <label class="slider-row" for="slider-temperature">
+                        <div class="slider-copy">
+                            <span>Temperature Shift</span>
+                            <output id="slider-temperature-value">+6</output>
+                        </div>
+                        <input id="slider-temperature" type="range" min="-50" max="50" step="1" value="6">
+                    </label>
                 </div>
             </section>
 
-            <!-- Diagnostic Panel -->
-            <section class="diagnostics-panel">
-                <div class="panel-header">
-                    <svg class="panel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-                        <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-                        <line x1="6" y1="6" x2="6.01" y2="6"></line>
-                        <line x1="6" y1="18" x2="6.01" y2="18"></line>
-                    </svg>
-                    <span>System Diagnostics</span>
+            <section class="panel-section compact-actions">
+                <button class="primary-action" type="button" id="generate-button" disabled>Generate Target Profile</button>
+                <p class="micro-copy">Profile generation is mocked for now. The preview below simulates how the offset could transfer.</p>
+            </section>
+
+            <section class="panel-section diagnostics-panel">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Diagnostics</p>
+                        <h2>Preview Telemetry</h2>
+                    </div>
+                    <span class="micro-note" id="diag-clock">--:--:--</span>
                 </div>
                 <div class="diagnostic-grid">
                     <div class="diag-item">
-                        <span class="diag-label">LOCAL_TIME</span>
-                        <span class="diag-value" id="diag-time">00:00:00 AM</span>
+                        <span class="diag-label">Platform</span>
+                        <span class="diag-value" id="diag-platform">Browser</span>
                     </div>
                     <div class="diag-item">
-                        <span class="diag-label">PLATFORM</span>
-                        <span class="diag-value" id="diag-platform">Web Browser</span>
+                        <span class="diag-label">Dimensions</span>
+                        <span class="diag-value" id="diag-dimensions">-</span>
                     </div>
                     <div class="diag-item">
-                        <span class="diag-label">ENGINE_STATE</span>
-                        <span class="diag-value text-success">Zero GPU Overhead</span>
+                        <span class="diag-label">Downscaling</span>
+                        <span class="diag-value" id="diag-downscale">Waiting for image</span>
                     </div>
                     <div class="diag-item">
-                        <span class="diag-label">STATUS</span>
-                        <span class="diag-value text-success">Ready</span>
+                        <span class="diag-label">Lens Metadata</span>
+                        <span class="diag-value" id="diag-lens">ISO / Aperture unavailable</span>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label">Active Slice</span>
+                        <span class="diag-value" id="diag-slice">Upper: Standard / Lower: Styled</span>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label">Preview Mode</span>
+                        <span class="diag-value text-accent">GPU CSS Transform</span>
                     </div>
                 </div>
             </section>
-        </div>
+        </aside>
+
+        <section class="preview-panel">
+            <div class="preview-header">
+                <div>
+                    <p class="eyebrow">Interactive Preview</p>
+                    <h2>Set Compare View</h2>
+                </div>
+                <div class="set-toggle" id="set-toggle" role="tablist" aria-label="Preview set selection">
+                    <button class="toggle-button is-active" type="button" data-set="A">Preview Set A</button>
+                    <button class="toggle-button" type="button" data-set="B">Preview Set B</button>
+                </div>
+            </div>
+
+            <div class="viewport-frame">
+                <div class="preview-overlay top-left">
+                    <span class="overlay-chip" id="overlay-set-label">SET A · Delta Source</span>
+                    <span class="overlay-chip subtle" id="overlay-file-label">No preview image loaded</span>
+                </div>
+
+                <div class="preview-overlay top-right controls-stack">
+                    <label class="zoom-control" for="zoom-slider">
+                        <span>Zoom</span>
+                        <input id="zoom-slider" type="range" min="10" max="600" step="1" value="100">
+                    </label>
+                    <div class="button-row">
+                        <button class="ghost-button" type="button" id="fit-button">Fit to Screen</button>
+                        <button class="ghost-button" type="button" id="reset-button">Reset Pan</button>
+                    </div>
+                    <span class="overlay-chip subtle" id="zoom-readout">100%</span>
+                </div>
+
+                <div class="preview-viewport" id="preview-viewport">
+                    <div class="image-canvas" id="image-canvas">
+                        <div class="preview-layer preview-layer-styled" id="styled-layer">
+                            <img id="styled-image" alt="Styled preview">
+                            <div class="tone-overlay" id="tone-overlay"></div>
+                        </div>
+                        <div class="preview-layer preview-layer-base" id="base-layer">
+                            <img id="base-image" alt="Base preview">
+                        </div>
+                    </div>
+
+                    <div class="split-bar" id="split-bar" role="separator" aria-orientation="horizontal" aria-valuemin="10" aria-valuemax="90" aria-valuenow="56">
+                        <div class="split-line"></div>
+                        <div class="split-handle">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+
+                    <div class="empty-state" id="empty-state">
+                        <h3>Load a preview image</h3>
+                        <p>Drop in an exported raw preview or browser-decodable image to start comparing profiles.</p>
+                    </div>
+                </div>
+
+                <div class="preview-overlay bottom-left">
+                    <span class="overlay-meta" id="overlay-slice-label">Upper: Reference Original · Lower: Reference Stylish</span>
+                    <span class="overlay-meta" id="overlay-dimensions-label">Awaiting preview dimensions</span>
+                </div>
+
+                <div class="preview-overlay bottom-right">
+                    <span class="overlay-chip subtle" id="overlay-performance-label">Split 56% · CSS clip-path live</span>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <!-- Footer -->
-    <footer class="app-footer">
-        <p>&copy; 2026 DCP-Tool. Hosted on <a href="https://github.com/DarkisuSu/DCP-Tool" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub Pages</a>.</p>
-    </footer>
-
-    <!-- JavaScript Bundle (with Cache Busting) -->
-    <script src="script.js?v=1.0.2"></script>
+    <script type="module" src="js/main.js?v=2.1.0"></script>
 </body>
 </html>
