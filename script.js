@@ -177,19 +177,24 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
             ctx.fillStyle = this.color;
-            // Glowing effect
-            if (this.isExplosion) {
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = this.color;
-            }
             ctx.fill();
+
+            // Hardware-accelerated glow effect: draw a wider, softer outer ring.
+            // This is composited directly on the GPU, avoiding CPU-heavy shadowBlur filters.
+            if (this.isExplosion) {
+                ctx.beginPath();
+                ctx.globalAlpha = this.alpha * 0.25;
+                ctx.arc(this.x, this.y, this.size * 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
             ctx.restore();
         }
     }
 
-    // Initialize gentle background particles
+    // Initialize gentle background particles (capped to 30 for high performance)
     const initBgParticles = () => {
-        const count = Math.min(60, Math.floor((width * height) / 15000));
+        const count = Math.min(30, Math.floor((width * height) / 25000));
         for (let i = 0; i < count; i++) {
             particles.push(new Particle());
         }
@@ -227,9 +232,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Keep standard background count constant
+        // Keep standard background count constant (capped to 30 for high performance)
         const bgParticlesCount = particles.filter(p => !p.isExplosion).length;
-        const targetBgCount = Math.min(60, Math.floor((width * height) / 15000));
+        const targetBgCount = Math.min(30, Math.floor((width * height) / 25000));
         if (bgParticlesCount < targetBgCount) {
             particles.push(new Particle());
         }
