@@ -63,6 +63,8 @@ function runTextFixture() {
 
     assert.equal(report.summary.skippedMismatchCount, 0);
     assert.equal(report.summary.pixelEntryCount > 0, true);
+    assert.equal(report.summary.changedTagCount > 0, true);
+    assert.match(report.summary.changedKeys.join(","), /ProfileHueSatMapData3/u);
     assert.match(output, /ColorMatrix1 = 2 0 0 0 2 0 0 0 2/u);
     assert.match(output, /<AsShotWhiteXY>0\.34567 0\.3585<\/AsShotWhiteXY>/u);
     assert.match(output, /ProfileToneCurve = 0 0 0\.5 0\.7 1 1/u);
@@ -120,13 +122,16 @@ function runBinaryFixture() {
     const styleDoc = parseDcpDocument(styleBuffer);
     const targetDoc = parseDcpDocument(targetBuffer);
     const report = createOffsetReport(baseDoc, styleDoc, targetDoc);
-    const reparsed = parseDcpDocument(report.outputDocument.serializeArrayBuffer());
+    const outputBuffer = report.outputDocument.serializeArrayBuffer();
+    const reparsed = parseDcpDocument(outputBuffer);
 
     assert.equal(baseDoc.format, "binary");
     assert.equal(styleDoc.format, "binary");
     assert.equal(targetDoc.format, "binary");
     assert.equal(report.summary.skippedMismatchCount, 0);
     assert.equal(report.summary.pixelEntryCount > 0, true);
+    assert.equal(report.summary.changedTagCount > 0, true);
+    assert.equal(countByteDifferences(targetBuffer, outputBuffer) > 0, true);
     assert.deepEqual(report.summary.unhandledKeys, []);
 
     const colorMatrix = readNumbers(reparsed, "colormatrix1");
@@ -356,4 +361,19 @@ function greatestCommonDivisor(left, right) {
         [a, b] = [b, a % b];
     }
     return a || 1;
+}
+
+function countByteDifferences(leftBuffer, rightBuffer) {
+    const left = new Uint8Array(leftBuffer);
+    const right = new Uint8Array(rightBuffer);
+    const limit = Math.max(left.length, right.length);
+    let changed = 0;
+
+    for (let index = 0; index < limit; index += 1) {
+        if ((left[index] ?? -1) !== (right[index] ?? -1)) {
+            changed += 1;
+        }
+    }
+
+    return changed;
 }

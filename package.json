@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "inspect": "node tools/inspect-offset.mjs",
     "test": "node tests/dcp-offset.test.mjs"
   }
 }

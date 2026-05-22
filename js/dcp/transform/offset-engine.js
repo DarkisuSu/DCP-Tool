@@ -5,6 +5,9 @@ export function createOffsetReport(baseDoc, styleDoc, targetDoc) {
     const usage = new Map();
     const strategyCounts = {};
     const unhandledKeys = new Set();
+    const changedKeys = [];
+    const unchangedPixelKeys = [];
+    const skippedKeys = [];
 
     let pixelEntryCount = 0;
     let changedNumberCount = 0;
@@ -28,6 +31,7 @@ export function createOffsetReport(baseDoc, styleDoc, targetDoc) {
         const styleEntry = styleDoc.findEntries(targetEntry.normalizedKey)[occurrenceIndex];
         if (!baseEntry || !styleEntry) {
             skippedMismatchCount += 1;
+            skippedKeys.push(targetEntry.key);
             return;
         }
 
@@ -42,21 +46,31 @@ export function createOffsetReport(baseDoc, styleDoc, targetDoc) {
 
         if (changed === null) {
             skippedMismatchCount += 1;
+            skippedKeys.push(targetEntry.key);
             return;
         }
 
         pixelEntryCount += 1;
         changedNumberCount += changed;
         strategyCounts[schema.strategy] = (strategyCounts[schema.strategy] || 0) + 1;
+        if (changed > 0) {
+            changedKeys.push(targetEntry.key);
+        } else {
+            unchangedPixelKeys.push(targetEntry.key);
+        }
     });
 
     return {
         summary: {
             changedNumberCount,
+            changedTagCount: changedKeys.length,
+            changedKeys,
             pixelEntryCount,
             skippedMetadataCount,
             skippedMismatchCount,
+            skippedKeys,
             strategyCounts,
+            unchangedPixelKeys,
             unhandledKeys: Array.from(unhandledKeys),
         },
         outputDocument: targetDoc,

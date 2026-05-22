@@ -1,6 +1,8 @@
 import { parseDcpDocument } from "./dcp/formats/document-factory.js";
 import { createOffsetReport } from "./dcp/transform/offset-engine.js";
 
+const BUILD_ID = "20260522-3";
+
 function readFileAsArrayBuffer(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -33,20 +35,80 @@ function setFilenameLabel(node, file) {
     node.textContent = file ? file.name : "No file selected";
 }
 
+function getBuildInfo() {
+    const moduleUrl = new URL(import.meta.url);
+    return {
+        buildId: BUILD_ID,
+        moduleUrl: moduleUrl.href,
+        scriptVersion: moduleUrl.searchParams.get("v") || "(none)",
+        loadedAt: new Date().toISOString(),
+    };
+}
+
+function renderBuildInfo() {
+    const info = getBuildInfo();
+    const node = document.getElementById("build-info");
+    if (node) {
+        node.textContent = `JS build ${info.buildId} loaded. script v=${info.scriptVersion}.`;
+        node.title = `${info.moduleUrl}\nloadedAt=${info.loadedAt}`;
+    }
+
+    globalThis.__DCP_TOOL_BUILD__ = info;
+    console.info("DCP Tool build info", info);
+}
+
 function formatSummary(summary) {
     const unhandled = summary.unhandledKeys.length > 0
         ? summary.unhandledKeys.join(", ")
         : "(none)";
+    const changed = summary.changedKeys.length > 0
+        ? summary.changedKeys.join(", ")
+        : "(none)";
 
     return [
         `changedNumberCount=${summary.changedNumberCount}`,
+        `changedTagCount=${summary.changedTagCount}`,
         `pixelEntryCount=${summary.pixelEntryCount}`,
         `skippedMismatchCount=${summary.skippedMismatchCount}`,
+        `changedKeys=${changed}`,
         `unhandledKeys=${unhandled}`,
     ].join(", ");
 }
 
+function countByteDifferences(leftBuffer, rightBuffer) {
+    const left = new Uint8Array(leftBuffer);
+    const right = new Uint8Array(rightBuffer);
+    const limit = Math.max(left.length, right.length);
+    let changed = 0;
+
+    for (let index = 0; index < limit; index += 1) {
+        if ((left[index] ?? -1) !== (right[index] ?? -1)) {
+            changed += 1;
+        }
+    }
+
+    return changed;
+}
+
+function measureOutputDelta(document) {
+    if (document.format === "binary") {
+        const outputBuffer = document.serializeArrayBuffer();
+        return {
+            kind: "bytes",
+            changedUnits: countByteDifferences(document.arrayBuffer, outputBuffer),
+        };
+    }
+
+    const outputText = document.serialize();
+    return {
+        kind: "chars",
+        changedUnits: outputText === document.text ? 0 : 1,
+    };
+}
+
 function bindUi() {
+    renderBuildInfo();
+
     const file1 = document.getElementById("dcp-file-1");
     const file2 = document.getElementById("dcp-file-2");
     const file3 = document.getElementById("dcp-file-3");
@@ -89,8 +151,10 @@ function bindUi() {
             const targetDoc = parseDcpDocument(buffers[2]);
             const report = createOffsetReport(baseDoc, styleDoc, targetDoc);
             const summary = report.summary;
+            const outputDelta = measureOutputDelta(report.outputDocument);
 
             console.info("DCP offset summary", summary);
+            console.info("DCP output delta", outputDelta);
 
             if (summary.pixelEntryCount === 0) {
                 throw new Error("No transformable pixel tags were found in DCP 3.");
@@ -98,6 +162,10 @@ function bindUi() {
 
             if (summary.changedNumberCount === 0) {
                 throw new Error(`Offset produced no pixel changes. ${formatSummary(summary)}`);
+            }
+
+            if (outputDelta.changedUnits === 0) {
+                throw new Error(`Output is byte-for-byte identical to DCP 3. ${formatSummary(summary)}`);
             }
 
             if (summary.skippedMismatchCount > 0 || summary.unhandledKeys.length > 0) {
