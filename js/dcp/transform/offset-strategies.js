@@ -61,8 +61,7 @@ function applyAdditive(baseEntry, styleEntry, targetEntry) {
         value + (styleValues[index] - baseValues[index])
     ));
 
-    const changed = targetEntry.setNumericValues(outputValues, buildSampleSets(baseEntry, styleEntry, targetEntry));
-    return changed === null ? null : changed;
+    return setNumericOutput(baseEntry, styleEntry, targetEntry, outputValues);
 }
 
 function applyPositiveRatio(baseEntry, styleEntry, targetEntry) {
@@ -82,15 +81,13 @@ function applyPositiveRatio(baseEntry, styleEntry, targetEntry) {
         outputValues.push(targetValues[index] * ratio);
     }
 
-    const changed = targetEntry.setNumericValues(outputValues, buildSampleSets(baseEntry, styleEntry, targetEntry));
-    return changed === null ? null : changed;
+    return setNumericOutput(baseEntry, styleEntry, targetEntry, outputValues);
 }
 
 function applyCopyStyle(baseEntry, styleEntry, targetEntry) {
     const styleValues = styleEntry.getNumericValues();
     if (styleValues) {
-        const changed = targetEntry.setNumericValues(styleValues, buildSampleSets(baseEntry, styleEntry, targetEntry));
-        return changed === null ? null : changed;
+        return setNumericOutput(baseEntry, styleEntry, targetEntry, styleValues);
     }
 
     if (typeof targetEntry.setRawValue === "function" && typeof styleEntry.getSerializedValue === "function") {
@@ -127,11 +124,7 @@ function applyMatrixOffset(baseEntry, styleEntry, targetEntry) {
 
     const offsetMatrix = multiplyMatrices(styleMatrix, inverseBase);
     const outputMatrix = multiplyMatrices(offsetMatrix, targetMatrix);
-    const changed = targetEntry.setNumericValues(
-        flattenMatrix(outputMatrix),
-        buildSampleSets(baseEntry, styleEntry, targetEntry),
-    );
-    return changed === null ? null : changed;
+    return setNumericOutput(baseEntry, styleEntry, targetEntry, flattenMatrix(outputMatrix), 1e-7);
 }
 
 function applyWhitePointOffset(baseEntry, styleEntry, targetEntry) {
@@ -147,14 +140,13 @@ function applyWhitePointOffset(baseEntry, styleEntry, targetEntry) {
         return null;
     }
 
-    const changed = targetEntry.setNumericValues(output, buildSampleSets(baseEntry, styleEntry, targetEntry));
-    return changed === null ? null : changed;
+    return setNumericOutput(baseEntry, styleEntry, targetEntry, output, 1e-9);
 }
 
 function applyToneCurveOffset(baseEntry, styleEntry, targetEntry) {
-    const basePairs = parseCurvePairs(baseEntry.getNumericValues());
-    const stylePairs = parseCurvePairs(styleEntry.getNumericValues());
-    const targetPairs = parseCurvePairs(targetEntry.getNumericValues());
+    const basePairs = parseCurvePairs(baseEntry.getNumericValues(), { requireMonotonicY: true });
+    const stylePairs = parseCurvePairs(styleEntry.getNumericValues(), { requireMonotonicY: false, repairMonotonicY: true });
+    const targetPairs = parseCurvePairs(targetEntry.getNumericValues(), { requireMonotonicY: false, repairMonotonicY: true });
     if (!basePairs || !stylePairs || !targetPairs) {
         return null;
     }
@@ -174,8 +166,7 @@ function applyToneCurveOffset(baseEntry, styleEntry, targetEntry) {
         outputValues.push(xValue, outputY);
     });
 
-    const changed = targetEntry.setNumericValues(outputValues, buildSampleSets(baseEntry, styleEntry, targetEntry));
-    return changed === null ? null : changed;
+    return setNumericOutput(baseEntry, styleEntry, targetEntry, outputValues, 1e-7);
 }
 
 function applyMonotonicLutOffset(baseEntry, styleEntry, targetEntry) {
@@ -199,8 +190,7 @@ function applyMonotonicLutOffset(baseEntry, styleEntry, targetEntry) {
         return evaluatePiecewise(styleFunc, normalizedInput);
     });
 
-    const changed = targetEntry.setNumericValues(outputValues, buildSampleSets(baseEntry, styleEntry, targetEntry));
-    return changed === null ? null : changed;
+    return setNumericOutput(baseEntry, styleEntry, targetEntry, outputValues);
 }
 
 function applyHsvTableOffset({ baseDoc, styleDoc, targetDoc, baseEntry, styleEntry, targetEntry, schema }) {
@@ -211,6 +201,7 @@ function applyHsvTableOffset({ baseDoc, styleDoc, targetDoc, baseEntry, styleEnt
         return null;
     }
 
+    const isLookTable = targetEntry.normalizedKey === "profilelooktabledata";
     const outputEncoding = readEncodingMode(styleDoc, schema.encodingKey);
     const baseEncoding = readEncodingMode(baseDoc, schema.encodingKey);
     const styleEncoding = readEncodingMode(styleDoc, schema.encodingKey);
@@ -234,21 +225,27 @@ function applyHsvTableOffset({ baseDoc, styleDoc, targetDoc, baseEntry, styleEnt
                     return null;
                 }
 
-                const satRatio = safeRatio(baseSample[1], styleSample[1]);
-                const valueRatio = safeRatio(baseSample[2], styleSample[2]);
-                if (satRatio === null || valueRatio === null) {
+                // Look tables are degenerate on the S=0 plane: hue is undefined and
+                // saturation scale can legitimately be zero, so relative ratios there
+                // are not invertible. Anchor that plane directly to the style table.
+                if (isLookTable && outputDims[1] > 1 && satIndex === 0) {
+                    outputValues.push(styleSample[0], styleSample[1], styleSample[2]);
+                    continue;
+                }
+
+                const satScale = composeScaleChannel(baseSample[1], styleSample[1], targetSample[1], isLookTable ? styleSample[1] : null);
+                const valueScale = composeScaleChannel(baseSample[2], styleSample[2], targetSample[2], isLookTable ? styleSample[2] : null);
+                const hueShift = composeHueChannel(baseSample[0], styleSample[0], targetSample[0], isLookTable ? styleSample[0] : null);
+                if (satScale === null || valueScale === null || hueShift === null) {
                     return null;
                 }
 
-                outputValues.push(wrapDegrees(targetSample[0] + wrapDegrees(styleSample[0] - baseSample[0])));
-                outputValues.push(targetSample[1] * satRatio);
-                outputValues.push(targetSample[2] * valueRatio);
+                outputValues.push(hueShift, satScale, valueScale);
             }
         }
     }
 
-    const changed = targetEntry.setNumericValues(outputValues, buildSampleSets(baseEntry, styleEntry, targetEntry));
-    return changed === null ? null : changed;
+    return setNumericOutput(baseEntry, styleEntry, targetEntry, outputValues, 1e-7);
 }
 
 function applyGainMapOffset(baseEntry, styleEntry, targetEntry) {
@@ -291,6 +288,10 @@ function applyGainMapOffset(baseEntry, styleEntry, targetEntry) {
         }
     }
 
+    if (arraysNearlyEqual(targetMap.data, output.data, 1e-7)) {
+        return 0;
+    }
+
     return targetEntry.setGainMap(output, buildSampleSets(baseEntry, styleEntry, targetEntry));
 }
 
@@ -311,7 +312,8 @@ function buildSampleSets(baseEntry, styleEntry, targetEntry) {
     ]);
 }
 
-function parseCurvePairs(values) {
+function parseCurvePairs(values, options = {}) {
+    const { requireMonotonicY = true, repairMonotonicY = false } = options;
     if (!values || values.length < 4 || values.length % 2 !== 0) {
         return null;
     }
@@ -326,11 +328,67 @@ function parseCurvePairs(values) {
             return null;
         }
         if (pairs[index][1] + EPSILON < pairs[index - 1][1]) {
-            return null;
+            if (repairMonotonicY) {
+                pairs[index][1] = pairs[index - 1][1];
+            } else if (requireMonotonicY) {
+                return null;
+            }
         }
     }
 
     return pairs;
+}
+
+function setNumericOutput(baseEntry, styleEntry, targetEntry, outputValues, tolerance = 1e-9) {
+    const targetValues = targetEntry.getNumericValues();
+    if (sameLength(targetValues, outputValues) && arraysNearlyEqual(targetValues, outputValues, tolerance)) {
+        return 0;
+    }
+
+    const changed = targetEntry.setNumericValues(outputValues, buildSampleSets(baseEntry, styleEntry, targetEntry));
+    return changed === null ? null : changed;
+}
+
+function arraysNearlyEqual(left, right, tolerance = 1e-9) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+        return false;
+    }
+
+    for (let index = 0; index < left.length; index += 1) {
+        if (!Number.isFinite(left[index]) || !Number.isFinite(right[index])) {
+            return false;
+        }
+        if (Math.abs(left[index] - right[index]) > tolerance) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function composeScaleChannel(baseValue, styleValue, targetValue, fallbackValue = null) {
+    const ratio = safeRatio(baseValue, styleValue);
+    if (ratio !== null && Number.isFinite(targetValue)) {
+        return targetValue * ratio;
+    }
+
+    if (fallbackValue !== null && Number.isFinite(fallbackValue)) {
+        return fallbackValue;
+    }
+
+    return null;
+}
+
+function composeHueChannel(baseValue, styleValue, targetValue, fallbackValue = null) {
+    if (Number.isFinite(baseValue) && Number.isFinite(styleValue) && Number.isFinite(targetValue)) {
+        return wrapDegrees(targetValue + wrapDegrees(styleValue - baseValue));
+    }
+
+    if (fallbackValue !== null && Number.isFinite(fallbackValue)) {
+        return fallbackValue;
+    }
+
+    return null;
 }
 
 function readTableDims(document, normalizedKey) {

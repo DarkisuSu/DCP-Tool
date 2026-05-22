@@ -9,6 +9,7 @@ const LITTLE_ENDIAN = true;
 
 runTextFixture();
 runBinaryFixture();
+runDegenerateFixture();
 
 console.log("ok");
 
@@ -168,6 +169,44 @@ function runBinaryFixture() {
     const copyright = reparsed.findEntries("profilecopyright")[0];
     assert.equal(copyright.valueKind, "text");
     assert.equal(copyright.decodedValue, "Keep Target");
+}
+
+function runDegenerateFixture() {
+    const baseDocument = [
+        "ProfileToneCurve = 0 0 0.2 0.2 0.4 0.4 0.6 0.6 0.8 0.8 1 1",
+        "ProfileLookTableDims = 2 2 1",
+        "ProfileLookTableData = 0 0 1 10 0 1 20 1 1 30 1 1",
+        "ProfileLookTableEncoding = 1",
+        "",
+    ].join("\n");
+
+    const styleDocument = [
+        "ProfileToneCurve = 0 0 0.2 0.35 0.4 0.7 0.6 0.82 0.8 0.81 1 1",
+        "ProfileLookTableDims = 2 2 1",
+        "ProfileLookTableData = 45 0 0.95 60 0 0.9 90 0.8 1.2 120 1.1 1.3",
+        "ProfileLookTableEncoding = 1",
+        "",
+    ].join("\n");
+
+    const targetDocument = [
+        "ProfileToneCurve = 0 0 0.2 0.18 0.4 0.42 0.6 0.58 0.8 0.83 1 1",
+        "ProfileLookTableDims = 2 2 1",
+        "ProfileLookTableData = 5 0 1 15 0 1 25 0.9 0.95 35 1 1.05",
+        "ProfileLookTableEncoding = 1",
+        "",
+    ].join("\n");
+
+    const baseDoc = parseDcpDocument(encoder.encode(baseDocument).buffer);
+    const styleDoc = parseDcpDocument(encoder.encode(styleDocument).buffer);
+    const targetDoc = parseDcpDocument(encoder.encode(targetDocument).buffer);
+    const report = createOffsetReport(baseDoc, styleDoc, targetDoc);
+    const output = report.outputDocument.serialize();
+
+    assert.equal(report.summary.skippedMismatchCount, 0);
+    assert.match(report.summary.changedKeys.join(","), /ProfileToneCurve/u);
+    assert.match(report.summary.changedKeys.join(","), /ProfileLookTableData/u);
+    assert.match(output, /ProfileLookTableData = 45 0 0\.95/u);
+    assert.doesNotMatch(output, /ProfileLookTableData = 5 0 1 15 0 1/u);
 }
 
 function createTextDocument(profile) {
