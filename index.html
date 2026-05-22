@@ -14,245 +14,43 @@
     <link rel="stylesheet" href="style.css?v=2.0.0">
 </head>
 <body>
-    <main class="workspace-shell">
-        <aside class="sidebar-panel">
-            <header class="sidebar-header">
-                <div class="brand-block">
-                    <div class="brand-mark">DCP</div>
-                    <div>
-                        <p class="eyebrow">Raw Profile Lab</p>
-                        <h1>DCP Preview Studio</h1>
-                    </div>
-                </div>
-                <div class="status-cluster">
-                    <div class="status-pill">
-                        <span class="status-dot"></span>
-                        <span id="status-text">SIMULATION READY</span>
-                    </div>
-                    <div class="active-set-pill" id="active-set-pill">SET A ACTIVE</div>
-                </div>
-            </header>
+    <main class="minimal-shell">
+        <header class="minimal-header">
+            <h1>DCP Tool — 簡化產生器</h1>
+            <p>僅保留功能：三個 DCP 輸入 → 產生 offset-style DCP 並下載</p>
+        </header>
 
-            <section class="panel-section">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">Profile Workflow</p>
-                        <h2>DCP Slots</h2>
-                    </div>
-                    <span class="micro-note">4 sources tracked</span>
-                </div>
-
-                <div class="slot-group">
-                    <div class="group-label">
-                        <span>SET A</span>
-                        <small>Delta References</small>
-                    </div>
-                    <div class="dropzone-grid">
-                        <label class="dropzone-card" for="slot-a-original-input" data-slot="a-original">
-                            <input id="slot-a-original-input" class="visually-hidden" type="file" accept=".dcp">
-                            <span class="dropzone-label">Reference Original</span>
-                            <span class="dropzone-subtitle">Standard source profile</span>
-                            <span class="dropzone-file" id="slot-a-original-name">Drop or click to load .dcp</span>
-                        </label>
-                        <label class="dropzone-card" for="slot-a-stylish-input" data-slot="a-stylish">
-                            <input id="slot-a-stylish-input" class="visually-hidden" type="file" accept=".dcp">
-                            <span class="dropzone-label">Reference Stylish</span>
-                            <span class="dropzone-subtitle">Edited source profile</span>
-                            <span class="dropzone-file" id="slot-a-stylish-name">Drop or click to load .dcp</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="slot-group">
-                    <div class="group-label">
-                        <span>SET B</span>
-                        <small>Target Generation</small>
-                    </div>
-                    <div class="dropzone-grid">
-                        <label class="dropzone-card" for="slot-b-base-input" data-slot="b-base">
-                            <input id="slot-b-base-input" class="visually-hidden" type="file" accept=".dcp">
-                            <span class="dropzone-label">Base Target</span>
-                            <span class="dropzone-subtitle">Standard target profile</span>
-                            <span class="dropzone-file" id="slot-b-base-name">Drop or click to load .dcp</span>
-                        </label>
-                        <label class="dropzone-card" for="slot-b-generated-input" data-slot="b-generated">
-                            <input id="slot-b-generated-input" class="visually-hidden" type="file" accept=".dcp">
-                            <span class="dropzone-label">Generated Target</span>
-                            <span class="dropzone-subtitle">Future output profile</span>
-                            <span class="dropzone-file" id="slot-b-generated-name">Simulated by style delta for now</span>
-                        </label>
-                    </div>
-                </div>
-            </section>
-
-            <section class="panel-section">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">Preview Source</p>
-                        <h2>Raw / Image Input</h2>
-                    </div>
-                    <span class="micro-note">Browser-safe preview</span>
-                </div>
-
-                <label class="image-dropzone" for="preview-image-input" id="image-dropzone">
-                    <input id="preview-image-input" class="visually-hidden" type="file" accept="image/*,.dng,.cr2,.cr3,.nef,.arw,.raf,.orf,.rw2">
-                    <span class="dropzone-label">Drop preview image here</span>
-                    <span class="dropzone-subtitle">Use JPEG, PNG, WebP, SVG, or any browser-decodable raw export.</span>
-                    <span class="dropzone-file" id="image-file-name">No preview image loaded yet.</span>
+        <section class="minimal-ui">
+            <div class="input-row">
+                <label>輸入 DCP 1 (檔案)
+                    <input id="dcp-file-1" type="file" accept=".dcp" />
                 </label>
-            </section>
-
-            <section class="panel-section">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">Simulation</p>
-                        <h2>Style Delta Sliders</h2>
-                    </div>
-                    <span class="micro-note">Lower slice only</span>
-                </div>
-
-                <div class="slider-stack">
-                    <label class="slider-row" for="slider-exposure">
-                        <div class="slider-copy">
-                            <span>Exposure Delta</span>
-                            <output id="slider-exposure-value">+0.00 EV</output>
-                        </div>
-                        <input id="slider-exposure" type="range" min="-2" max="2" step="0.05" value="0.25">
-                    </label>
-                    <label class="slider-row" for="slider-contrast">
-                        <div class="slider-copy">
-                            <span>Contrast Delta</span>
-                            <output id="slider-contrast-value">+8</output>
-                        </div>
-                        <input id="slider-contrast" type="range" min="-50" max="50" step="1" value="8">
-                    </label>
-                    <label class="slider-row" for="slider-saturation">
-                        <div class="slider-copy">
-                            <span>Saturation Offset</span>
-                            <output id="slider-saturation-value">+12</output>
-                        </div>
-                        <input id="slider-saturation" type="range" min="-50" max="50" step="1" value="12">
-                    </label>
-                    <label class="slider-row" for="slider-temperature">
-                        <div class="slider-copy">
-                            <span>Temperature Shift</span>
-                            <output id="slider-temperature-value">+6</output>
-                        </div>
-                        <input id="slider-temperature" type="range" min="-50" max="50" step="1" value="6">
-                    </label>
-                </div>
-            </section>
-
-            <section class="panel-section compact-actions">
-                <button class="primary-action" type="button" id="generate-button" disabled>Generate Target Profile</button>
-                <p class="micro-copy">Profile generation is mocked for now. The preview below simulates how the offset could transfer.</p>
-            </section>
-
-            <section class="panel-section diagnostics-panel">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">Diagnostics</p>
-                        <h2>Preview Telemetry</h2>
-                    </div>
-                    <span class="micro-note" id="diag-clock">--:--:--</span>
-                </div>
-                <div class="diagnostic-grid">
-                    <div class="diag-item">
-                        <span class="diag-label">Platform</span>
-                        <span class="diag-value" id="diag-platform">Browser</span>
-                    </div>
-                    <div class="diag-item">
-                        <span class="diag-label">Dimensions</span>
-                        <span class="diag-value" id="diag-dimensions">-</span>
-                    </div>
-                    <div class="diag-item">
-                        <span class="diag-label">Downscaling</span>
-                        <span class="diag-value" id="diag-downscale">Waiting for image</span>
-                    </div>
-                    <div class="diag-item">
-                        <span class="diag-label">Lens Metadata</span>
-                        <span class="diag-value" id="diag-lens">ISO / Aperture unavailable</span>
-                    </div>
-                    <div class="diag-item">
-                        <span class="diag-label">Active Slice</span>
-                        <span class="diag-value" id="diag-slice">Upper: Standard / Lower: Styled</span>
-                    </div>
-                    <div class="diag-item">
-                        <span class="diag-label">Preview Mode</span>
-                        <span class="diag-value text-accent">GPU CSS Transform</span>
-                    </div>
-                </div>
-            </section>
-        </aside>
-
-        <section class="preview-panel">
-            <div class="preview-header">
-                <div>
-                    <p class="eyebrow">Interactive Preview</p>
-                    <h2>Set Compare View</h2>
-                </div>
-                <div class="set-toggle" id="set-toggle" role="tablist" aria-label="Preview set selection">
-                    <button class="toggle-button is-active" type="button" data-set="A">Preview Set A</button>
-                    <button class="toggle-button" type="button" data-set="B">Preview Set B</button>
-                </div>
+                <div id="dcp-name-1" class="file-name">尚未選擇檔案</div>
             </div>
 
-            <div class="viewport-frame">
-                <div class="preview-overlay top-left">
-                    <span class="overlay-chip" id="overlay-set-label">SET A · Delta Source</span>
-                    <span class="overlay-chip subtle" id="overlay-file-label">No preview image loaded</span>
-                </div>
-
-                <div class="preview-overlay top-right controls-stack">
-                    <label class="zoom-control" for="zoom-slider">
-                        <span>Zoom</span>
-                        <input id="zoom-slider" type="range" min="10" max="600" step="1" value="100">
-                    </label>
-                    <div class="button-row">
-                        <button class="ghost-button" type="button" id="fit-button">Fit to Screen</button>
-                        <button class="ghost-button" type="button" id="reset-button">Reset Pan</button>
-                    </div>
-                    <span class="overlay-chip subtle" id="zoom-readout">100%</span>
-                </div>
-
-                <div class="preview-viewport" id="preview-viewport">
-                    <div class="image-canvas" id="image-canvas">
-                        <div class="preview-layer preview-layer-styled" id="styled-layer">
-                            <img id="styled-image" alt="Styled preview">
-                            <div class="tone-overlay" id="tone-overlay"></div>
-                        </div>
-                        <div class="preview-layer preview-layer-base" id="base-layer">
-                            <img id="base-image" alt="Base preview">
-                        </div>
-                    </div>
-
-                    <div class="split-bar" id="split-bar" role="separator" aria-orientation="horizontal" aria-valuemin="10" aria-valuemax="90" aria-valuenow="56">
-                        <div class="split-line"></div>
-                        <div class="split-handle">
-                            <span></span>
-                            <span></span>
-                            <span></span>
-                        </div>
-                    </div>
-
-                    <div class="empty-state" id="empty-state">
-                        <h3>Load a preview image</h3>
-                        <p>Drop in an exported raw preview or browser-decodable image to start comparing profiles.</p>
-                    </div>
-                </div>
-
-                <div class="preview-overlay bottom-left">
-                    <span class="overlay-meta" id="overlay-slice-label">Upper: Reference Original · Lower: Reference Stylish</span>
-                    <span class="overlay-meta" id="overlay-dimensions-label">Awaiting preview dimensions</span>
-                </div>
-
-                <div class="preview-overlay bottom-right">
-                    <span class="overlay-chip subtle" id="overlay-performance-label">Split 56% · CSS clip-path live</span>
-                </div>
+            <div class="input-row">
+                <label>輸入 DCP 2 (檔案)
+                    <input id="dcp-file-2" type="file" accept=".dcp" />
+                </label>
+                <div id="dcp-name-2" class="file-name">尚未選擇檔案</div>
             </div>
+
+            <div class="input-row">
+                <label>輸入 DCP 3 (檔案)
+                    <input id="dcp-file-3" type="file" accept=".dcp" />
+                </label>
+                <div id="dcp-name-3" class="file-name">尚未選擇檔案</div>
+            </div>
+
+            <div class="actions">
+                <button id="generate-download" class="primary">產生並下載 offset-style DCP</button>
+            </div>
+
+            <p class="note">使用說明：選擇三個 .dcp 檔案後按下按鈕，瀏覽器會在前端產生一個合併的 offset-style DCP 並觸發下載。</p>
         </section>
+
     </main>
 
-    <script type="module" src="js/main.js?v=2.1.0"></script>
+    <script type="module" src="js/generate.js"></script>
 </body>
 </html>

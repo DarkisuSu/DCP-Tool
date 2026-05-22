@@ -1,109 +1,32 @@
-# Implementation Plan - DCP Raw Profile Editor & Interactive Preview
+# Implementation Plan（極度簡化）
 
-We are building a tool to edit DNG Camera Profiles (DCP) and preview the results on raw images.
-The ultimate goal of this tool is to **transfer a style profile** by extracting the image-related parameter delta (offset) between a **Reference Original Profile (original2)** and a **Reference Stylish Profile (edited2)**, and applying that delta to a **Base Target Profile**.
+目的：把專案功能縮減為單一任務，僅保留使用三個 DCP 輸入產生一個 offset-style DCP 並立即下載的流程。其餘的預覽、修改、編輯或多餘 UI 功能全部移除。
 
-Currently, we are building the **high-performance RAW preview function** step-by-step. To ensure the interface perfectly aligns with our final editing method, we will structure the preview system to support two profile sets:
+範圍：
+- 前端：一個簡單頁面，含三個 DCP 輸入欄位與一個 `產生並下載` 按鈕。
+- 行為：使用者填入三個 DCP（或選擇檔案/貼上文字），按下按鈕後立即在瀏覽器端產生 offset-style DCP 並觸發檔案下載。
+- 移除：所有預覽視窗、即時修改、版本管理、編輯器與多餘按鈕或模組。
 
-- **Set A (Delta References)**:
-  - **Upper Slice**: Reference Original (Standard) Profile
-  - **Lower Slice**: Reference Stylish (Edited) Profile
-- **Set B (Generate Reference)**:
-  - **Upper Slice**: Base Target (Standard) Profile
-  - **Lower Slice**: Generated Target (Edited) Profile
+資料流與實作要點：
+1. 前端 UI
+   - 三個簡單輸入欄位（`DCP1`, `DCP2`, `DCP3`）或三個檔案上傳控件（視現有實作選擇最簡方案）。
+   - 一顆 `產生並下載` 按鈕（按下即同步處理並下載）。
 
-The user will be able to instantly swap the preview between **Set A** and **Set B** to compare the style difference on both profiles!
+2. 處理邏輯
+   - 在前端（`js`）接收三份 DCP 原始資料。
+   - 將三份 DCP 合併/轉換成單一 offset-style DCP（具體轉換規則沿用現有專案中產生 offset 的邏輯，必要時簡化）。
+   - 產生後以 Blob 方式建立檔案，並使用 anchor + `download` 屬性觸發下載。
 
----
+3. 測試
+   - 手動測試多組輸入以確認產出的 DCP 格式與內容正確，並確認下載檔名合理。
 
-## User Review Required
+交付物：
+- 更新後的 `index.html`（或必要的 UI 最小化修改）。
+- 修改後的 `js` 檔案（移除預覽/編輯程式碼、新增產生並下載功能）。
+- 簡短使用說明（README 段落或文件註解）。
 
-Please review the updated workflow and preview toggle design:
+風險與假設：
+- 假設現有程式中有用於產生 offset-style DCP 的核心邏輯，實作可重利用；若不存在，需定義最小轉換規則。
+- 假設使用者同意在瀏覽器端完成所有處理與下載（不需後端）。
 
-> [!NOTE]
-> **Set A & Set B Profile Slots**:
-> The left sidebar will contain four structured file dropzones divided into two clear groups:
-> - **SET A (Delta References)**
->   1. **Reference Original (.dcp)**: Standard unedited source profile.
->   2. **Reference Stylish (.dcp)**: Edited/stylish source profile.
-> - **SET B (Target Generation)**
->   3. **Base Target (.dcp)**: The standard target profile you want to style.
->   4. **Generated Target (.dcp)**: The resulting styled target profile (automatically calculated in the future, currently simulated).
-
-> [!IMPORTANT]
-> **Draggable Slice Comparison Bar**:
-> We will implement a horizontal comparison slider bar that can be dragged vertically (up and down):
-> 1. **Upper Part**: Renders the image with the **Standard (Original / Base) Profile** of the selected set.
-> 2. **Lower Part**: Renders the image with the **Stylish (Edited / Generated) Profile** of the selected set.
-> 3. **Sync Pan & Zoom**: Both original and edited previews will pan and zoom perfectly in sync.
-> 4. **High Performance**: We will use overlapping wrappers with matching CSS 3D transforms (`translate3d` and `scale`). The dividing line will adjust a CSS `clip-path` overlay in real-time. This ensures butter-smooth dragging of the split bar and images at 60 FPS.
-
-> [!TIP]
-> **Active Set Swap & Delta Simulation**:
-> We will add a prominent **Set Selection Toggle** (`[ Preview Set A: Delta Source ]` vs. `[ Preview Set B: Styled Target ]`) floating above the preview area.
-> Toggling between Set A and Set B will instantly update the style treatment of the lower slice:
-> - **Set A Preview**: Simulates the source style (e.g. dramatic high-contrast cinematic style).
-> - **Set B Preview**: Simulates the style applied to the target base (which might have a different default brightness or tone, showing how the style transfers to the target camera profile).
-> - **Delta Sliders**: Interactive sliders in the left panel allow you to tweak the style offsets dynamically to see the impact.
-
----
-
-## Proposed Changes
-
-We will modify `index.html`, `style.css`, and `script.js` to create the editor interface.
-
-### 1. Main Workspace
-
-#### [MODIFY] `index.html`
-- Clean up the "Hello World" template.
-- Implement the split-screen structure:
-  - **Left Sidebar Container**:
-    - **Header**: Tech-accented logo, system status dot, active profile indicator.
-    - **File Workflow Section**:
-      - **SET A (Delta Source)** slots: Reference Original Dropzone, Reference Stylish Dropzone.
-      - **SET B (Generated Target)** slots: Base Target Dropzone, Generated Target Dropzone.
-    - **Raw Image Picker Section**:
-      - Drag-and-drop zone for custom Raw/Image preview files.
-      - Beautiful visual cards to quickly select 3 high-resolution sample images.
-    - **Style Delta Sliders (Active Simulation)**:
-      - Sliders for Exposure Delta, Contrast Delta, Saturation Offset, and Temperature Shift.
-    - **Action Button**: "Generate Target Profile" button (disabled/mocked for now).
-    - **Diagnostics/Info**: Downscaling stats, metadata readouts (ISO, Aperture, Dimensions).
-  - **Right Preview Panel Container**:
-    - **Interactive Viewport**: Contains the overlapping Before and After layers.
-    - **Set Selection Tab Toggle**: Segmented toggle to choose between `PREVIEW SET A` and `PREVIEW SET B`.
-    - **Draggable Split Bar**: A horizontal divider with a styled drag handle overlay.
-    - Viewport overlays: Zoom Slider, Zoom Percent Indicator, "Fit to Screen" button, "Reset Pan" button.
-    - Visual overlay metadata showing active set, filename, dimensions, and performance stats.
-
-#### [MODIFY] `style.css`
-- Implement a premium dark studio theme (deep slate, dark charcoal, vibrant neon blue/green accents).
-- Setup layout classes for the split-screen (`display: grid` or `flex` with height locked to `100vh`).
-- Style the file dropzone slots and the Set Selection segmented toggle.
-- Style the split preview container and draggable comparison bar. Ensure full hardware acceleration support is active (`will-change: transform, clip-path`).
-
-#### [MODIFY] `script.js`
-- Implement raw image loader (supports user uploads and sample select).
-- **Interactive Handlers**:
-  - Mouse drag / Touch drag to pan.
-  - Mouse wheel to zoom centered on cursor.
-  - Double click to toggle between "Fit" and "100% Zoom".
-  - **Vertical Slider Dragging**: Dragging the horizontal split bar vertically updates the CSS `clip-path` of the upper preview wrapper.
-  - **Set Swapping & Live Filter Pipeline**:
-    - Keep track of selected set (`A` or `B`).
-    - Adjust CSS filters on the lower (stylish) layer based on the selected Set and the Delta Sliders:
-      - **Set A (Source style)**: e.g. classic cinematic teal-and-orange grading simulation.
-      - **Set B (Target style)**: e.g. clean portrait/editorial style simulation.
-- Implement file drag-and-drop listeners for files.
-
----
-
-## Verification Plan
-
-### Manual & Interactive Testing
-1. **Set Swap Toggle**: Click between `PREVIEW SET A` and `PREVIEW SET B`. Verify the lower preview slice updates immediately to show the respective profile style.
-2. **DCP Slots UI**: Verify all 4 DCP slots (Set A standard/stylish, Set B standard/stylish) display correctly and support drag/drop feedback.
-3. **Slice Slider Dragging**: Click and drag the horizontal split bar up and down. Verify it smoothly shifts the division line between the original image (top) and edited image (bottom).
-4. **Interactive Zooming & Panning**: Zoom and pan the image. Verify that both parts zoom/pan in perfect synchronization, centered on the cursor, with no lag.
-5. **Adjustment Effect**: Modify the left sidebar exposure/saturation sliders. Verify the changes apply *only* to the lower part of the image, while the upper part remains unchanged.
-6. **Sample Picker**: Switch between sample images. Verify the zoom/pan/divider positions reset cleanly.
+下一步：依照此計畫，移除預覽/修改相關程式碼，並在 `js` 中新增三個輸入到產生並下載的實作。
