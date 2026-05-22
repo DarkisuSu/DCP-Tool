@@ -138,6 +138,7 @@ export const EXACT_TAGS = new Map([
     ["profilegaintablemap2", { strategy: STRATEGY.GAIN_MAP }],
     ["profilehuesatmapdata1", { strategy: STRATEGY.HSV_TABLE, dimsKey: "profilehuesatmapdims", encodingKey: "profilehuesatmapencoding" }],
     ["profilehuesatmapdata2", { strategy: STRATEGY.HSV_TABLE, dimsKey: "profilehuesatmapdims", encodingKey: "profilehuesatmapencoding" }],
+    ["profilehuesatmapdata3", { strategy: STRATEGY.HSV_TABLE, dimsKey: "profilehuesatmapdims", encodingKey: "profilehuesatmapencoding" }],
     ["profilehuesatmapencoding", { strategy: STRATEGY.COPY_STYLE }],
     ["profilelooktabledata", { strategy: STRATEGY.HSV_TABLE, dimsKey: "profilelooktabledims", encodingKey: "profilelooktableencoding" }],
     ["profilelooktableencoding", { strategy: STRATEGY.COPY_STYLE }],

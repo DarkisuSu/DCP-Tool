@@ -18,6 +18,7 @@ function runTextFixture() {
         whitePoint: [0.3127, 0.329],
         toneCurve: [0, 0, 0.5, 0.5, 1, 1],
         hueSatMap: [0, 1, 1, 0, 1, 1],
+        hueSatMap3: [0, 1, 1, 0, 1, 1],
         lookTable: [0, 1, 1, 0, 1, 1],
         baselineExposure: 0.1,
         gainMap: [1, 1.2],
@@ -31,6 +32,7 @@ function runTextFixture() {
         whitePoint: [0.34567, 0.3585],
         toneCurve: [0, 0, 0.5, 0.7, 1, 1],
         hueSatMap: [15, 1.2, 0.8, -10, 0.9, 1.1],
+        hueSatMap3: [25, 1.15, 0.85, -4, 0.95, 1.08],
         lookTable: [8, 1.1, 0.9, -6, 1.05, 1.2],
         baselineExposure: 0.3,
         gainMap: [1.26, 1.333333],
@@ -44,6 +46,7 @@ function runTextFixture() {
         whitePoint: [0.3127, 0.329],
         toneCurve: [0, 0, 0.5, 0.5, 1, 1],
         hueSatMap: [0, 1, 1, 0, 1, 1],
+        hueSatMap3: [0, 1, 1, 0, 1, 1],
         lookTable: [0, 1, 1, 0, 1, 1],
         baselineExposure: 0.1,
         gainMap: [1, 1.2],
@@ -64,6 +67,7 @@ function runTextFixture() {
     assert.match(output, /<AsShotWhiteXY>0\.34567 0\.3585<\/AsShotWhiteXY>/u);
     assert.match(output, /ProfileToneCurve = 0 0 0\.5 0\.7 1 1/u);
     assert.match(output, /ProfileHueSatMapData1 = 15 1\.2 0\.8 -10 0\.9 1\.1/u);
+    assert.match(output, /ProfileHueSatMapData3 = 25 1\.15 0\.85 -4 0\.95 1\.08/u);
     assert.match(output, /ProfileLookTableEncoding = 1/u);
     assert.match(output, /ProfileGainTableMap = 1 1 1 1 0 0 2 0\.333333 0\.333333 0\.333333 0 0 1\.26 1\.333333/u);
     assert.match(output, /ProfileCopyright = Keep Target/u);
@@ -75,6 +79,7 @@ function runBinaryFixture() {
         whitePoint: [0.3127, 0.329],
         toneCurve: [0, 0, 0.5, 0.5, 1, 1],
         hueSatMap: [0, 1, 1, 0, 1, 1],
+        hueSatMap3: [0, 1, 1, 0, 1, 1],
         lookTable: [0, 1, 1, 0, 1, 1],
         baselineExposure: 0.1,
         gainMap: [1, 1.2],
@@ -88,6 +93,7 @@ function runBinaryFixture() {
         whitePoint: [0.34567, 0.3585],
         toneCurve: [0, 0, 0.5, 0.7, 1, 1],
         hueSatMap: [15, 1.2, 0.8, -10, 0.9, 1.1],
+        hueSatMap3: [25, 1.15, 0.85, -4, 0.95, 1.08],
         lookTable: [8, 1.1, 0.9, -6, 1.05, 1.2],
         baselineExposure: 0.3,
         gainMap: [1.26, 1.333333],
@@ -101,6 +107,7 @@ function runBinaryFixture() {
         whitePoint: [0.3127, 0.329],
         toneCurve: [0, 0, 0.5, 0.5, 1, 1],
         hueSatMap: [0, 1, 1, 0, 1, 1],
+        hueSatMap3: [0, 1, 1, 0, 1, 1],
         lookTable: [0, 1, 1, 0, 1, 1],
         baselineExposure: 0.1,
         gainMap: [1, 1.2],
@@ -134,6 +141,9 @@ function runBinaryFixture() {
     const hueSatMap = readNumbers(reparsed, "profilehuesatmapdata1");
     assertArrayApproximatelyEqual(hueSatMap, [15, 1.2, 0.8, -10, 0.9, 1.1], 2e-5);
 
+    const hueSatMap3 = readNumbers(reparsed, "profilehuesatmapdata3");
+    assertArrayApproximatelyEqual(hueSatMap3, [25, 1.15, 0.85, -4, 0.95, 1.08], 2e-5);
+
     const lookTable = readNumbers(reparsed, "profilelooktabledata");
     assertArrayApproximatelyEqual(lookTable, [8, 1.1, 0.9, -6, 1.05, 1.2], 2e-5);
 
@@ -162,6 +172,7 @@ function createTextDocument(profile) {
         `ProfileToneCurve = ${profile.toneCurve.join(" ")}`,
         "ProfileHueSatMapDims = 2 1 1",
         `ProfileHueSatMapData1 = ${profile.hueSatMap.join(" ")}`,
+        `ProfileHueSatMapData3 = ${profile.hueSatMap3.join(" ")}`,
         "ProfileLookTableDims = 2 1 1",
         `ProfileLookTableData = ${profile.lookTable.join(" ")}`,
         `BaselineExposure = ${profile.baselineExposure}`,
@@ -180,6 +191,7 @@ function buildBinaryProfile(profile) {
         { id: 50730, type: 10, value: [profile.baselineExposure] },
         { id: 50937, type: 4, value: [2, 1, 1] },
         { id: 50938, type: 11, value: profile.hueSatMap },
+        { id: 52533, type: 11, value: profile.hueSatMap3 },
         { id: 50940, type: 11, value: profile.toneCurve },
         { id: 50942, type: 2, value: profile.copyright },
         { id: 50981, type: 4, value: [2, 1, 1] },

@@ -30,7 +30,20 @@ function buildOutputFilename(file) {
 }
 
 function setFilenameLabel(node, file) {
-    node.textContent = file ? file.name : "未選擇檔案";
+    node.textContent = file ? file.name : "No file selected";
+}
+
+function formatSummary(summary) {
+    const unhandled = summary.unhandledKeys.length > 0
+        ? summary.unhandledKeys.join(", ")
+        : "(none)";
+
+    return [
+        `changedNumberCount=${summary.changedNumberCount}`,
+        `pixelEntryCount=${summary.pixelEntryCount}`,
+        `skippedMismatchCount=${summary.skippedMismatchCount}`,
+        `unhandledKeys=${unhandled}`,
+    ].join(", ");
 }
 
 function bindUi() {
@@ -40,7 +53,7 @@ function bindUi() {
     const name1 = document.getElementById("dcp-name-1");
     const name2 = document.getElementById("dcp-name-2");
     const name3 = document.getElementById("dcp-name-3");
-    const btn = document.getElementById("generate-download");
+    const button = document.getElementById("generate-download");
 
     [file1, file2, file3].forEach((input, index) => {
         input.addEventListener("change", () => {
@@ -57,9 +70,9 @@ function bindUi() {
         });
     });
 
-    btn.addEventListener("click", async () => {
-        btn.disabled = true;
-        btn.textContent = "產生中...";
+    button.addEventListener("click", async () => {
+        button.disabled = true;
+        button.textContent = "Processing...";
 
         try {
             const files = [file1, file2, file3].map((input) => (
@@ -67,7 +80,7 @@ function bindUi() {
             ));
 
             if (files.some((file) => !file)) {
-                throw new Error("請先選擇三個 DCP 檔案。");
+                throw new Error("Please choose DCP 1, DCP 2, and DCP 3 before generating.");
             }
 
             const buffers = await Promise.all(files.map((file) => readFileAsArrayBuffer(file)));
@@ -75,19 +88,29 @@ function bindUi() {
             const styleDoc = parseDcpDocument(buffers[1]);
             const targetDoc = parseDcpDocument(buffers[2]);
             const report = createOffsetReport(baseDoc, styleDoc, targetDoc);
+            const summary = report.summary;
 
-            if (report.summary.pixelEntryCount === 0) {
-                throw new Error("找不到可處理的像素欄位。");
+            console.info("DCP offset summary", summary);
+
+            if (summary.pixelEntryCount === 0) {
+                throw new Error("No transformable pixel tags were found in DCP 3.");
+            }
+
+            if (summary.changedNumberCount === 0) {
+                throw new Error(`Offset produced no pixel changes. ${formatSummary(summary)}`);
+            }
+
+            if (summary.skippedMismatchCount > 0 || summary.unhandledKeys.length > 0) {
+                console.warn("DCP offset completed with partial coverage.", summary);
             }
 
             downloadBlob(buildOutputFilename(files[2]), report.outputDocument.toBlob());
-            console.info("DCP offset summary", report.summary);
         } catch (error) {
-            console.error("產生 offset DCP 失敗", error);
-            alert(`產生失敗：${error && error.message ? error.message : String(error)}`);
+            console.error("Failed to generate offset DCP.", error);
+            alert(`Failed to generate offset DCP: ${error && error.message ? error.message : String(error)}`);
         } finally {
-            btn.disabled = false;
-            btn.textContent = "產生並下載 offset-style DCP";
+            button.disabled = false;
+            button.textContent = "Generate and download offset-style DCP";
         }
     });
 }
