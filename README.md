@@ -28,5 +28,5 @@ Informational fields such as camera name, copyright, profile name, digest, and p
 
 ## Notes
 
-- This GitHub Pages version currently supports text-based DCP content that can be parsed in the browser.
-- Native Adobe binary `.dcp` files are not currently supported by this web version.
+- This GitHub Pages version supports both native Adobe binary `.dcp` files and text-based DCP exports that can be parsed in the browser.
+- The binary workflow patches supported tags in place so the original DCP container layout stays intact.

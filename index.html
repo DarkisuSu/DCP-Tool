@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,36 +17,36 @@
     <main class="minimal-shell">
         <header class="minimal-header">
             <h1>DCP Offset Tool</h1>
-            <p>把 DCP1 到 DCP2 的像素相關差值套用到 DCP3，直接下載新的 offset-style DCP。</p>
+            <p>Apply the image-related offset from DCP1 to DCP2 onto DCP3 and download a new offset-style DCP.</p>
         </header>
 
         <section class="minimal-ui">
             <div class="input-row">
-                <label>選擇 DCP 1（基準）
-                    <input id="dcp-file-1" type="file" accept=".dcp" />
+                <label>Select DCP 1 (base)
+                    <input id="dcp-file-1" type="file" accept=".dcp,.xml,.txt" />
                 </label>
-                <div id="dcp-name-1" class="file-name">未選擇檔案</div>
+                <div id="dcp-name-1" class="file-name">No file selected</div>
             </div>
 
             <div class="input-row">
-                <label>選擇 DCP 2（風格來源）
-                    <input id="dcp-file-2" type="file" accept=".dcp" />
+                <label>Select DCP 2 (style source)
+                    <input id="dcp-file-2" type="file" accept=".dcp,.xml,.txt" />
                 </label>
-                <div id="dcp-name-2" class="file-name">未選擇檔案</div>
+                <div id="dcp-name-2" class="file-name">No file selected</div>
             </div>
 
             <div class="input-row">
-                <label>選擇 DCP 3（目標）
-                    <input id="dcp-file-3" type="file" accept=".dcp" />
+                <label>Select DCP 3 (target)
+                    <input id="dcp-file-3" type="file" accept=".dcp,.xml,.txt" />
                 </label>
-                <div id="dcp-name-3" class="file-name">未選擇檔案</div>
+                <div id="dcp-name-3" class="file-name">No file selected</div>
             </div>
 
             <div class="actions">
-                <button id="generate-download" class="primary">產生並下載 offset-style DCP</button>
+                <button id="generate-download" class="primary">Generate and download offset-style DCP</button>
             </div>
 
-            <p class="note">會優先處理色彩矩陣、Camera Calibration、Forward Matrix、Black/White Level、Tone Curve、HueSatMap、LookTable、曝光與其他會影響畫素輸出的數值欄位；相機名稱、版權、Profile 名稱、Preview/Digest 等純資訊欄位會保留 DCP3 原值。</p>
+            <p class="note">Supports native Adobe binary .dcp files and parseable text exports. Image-affecting fields such as matrices, white balance, tone curves, HueSat maps, LookTables, gain maps, exposure, and level tags are transformed. Informational metadata keeps the original DCP3 value.</p>
         </section>
     </main>
 

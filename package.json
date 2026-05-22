@@ -1,0 +1,8 @@
+{
+  "name": "dcp-tool",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/dcp-offset.test.mjs"
+  }
+}
