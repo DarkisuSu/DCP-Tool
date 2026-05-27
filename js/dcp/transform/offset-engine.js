@@ -1,5 +1,5 @@
 import { isMetadataKey, resolveTagSchema } from "../core/schema.js";
-import { transformEntry } from "./offset-strategies.js";
+import { transformEntry, copyEntryValue } from "./offset-strategies.js";
 
 export function createOffsetReport(baseDoc, styleDoc, targetDoc) {
     const usage = new Map();
@@ -29,12 +29,28 @@ export function createOffsetReport(baseDoc, styleDoc, targetDoc) {
 
         const baseEntry = baseDoc.findEntries(targetEntry.normalizedKey)[occurrenceIndex];
         const styleEntry = styleDoc.findEntries(targetEntry.normalizedKey)[occurrenceIndex];
-        if (!baseEntry || !styleEntry) {
-            skippedMismatchCount += 1;
-            skippedKeys.push(targetEntry.key);
+
+        // 1. 如果 dcp2 不存在，則改用 identity (保持 dcp3 不變)
+        if (!styleEntry) {
+            pixelEntryCount += 1;
+            unchangedPixelKeys.push(targetEntry.key);
             return;
         }
 
+        // 2. 如果 dcp1 不存在，但 dcp2 存在，則直接修改為 dcp2 的像素資訊
+        if (!baseEntry) {
+            pixelEntryCount += 1;
+            const changed = copyEntryValue(styleEntry, targetEntry);
+            if (changed > 0) {
+                changedKeys.push(targetEntry.key);
+                changedNumberCount += changed;
+            } else {
+                unchangedPixelKeys.push(targetEntry.key);
+            }
+            return;
+        }
+
+        // 3. 如果兩者都存在，沿用原本的 offset 計算邏輯
         const changed = transformEntry({
             baseDoc,
             styleDoc,

@@ -26,6 +26,7 @@ export class BinaryDcpEntry {
         this.key = descriptor.key;
         this.normalizedKey = normalizeKey(descriptor.key);
         this.patchedBytes = null;
+        this.patchedCount = null;
     }
 
     getNumericValues() {
@@ -65,7 +66,21 @@ export class BinaryDcpEntry {
         }
 
         this.patchedBytes = encoded;
+        this.patchedCount = this.count;
         return countDifferentBytes(encoded, this.rawBytes);
+    }
+
+    setTextValue(text) {
+        if (this.valueKind !== "text") {
+            return null;
+        }
+
+        const encoded = encodeTextValue(this.typeId, text);
+        this.patchedBytes = encoded;
+        this.patchedCount = encoded.length;
+        const changed = text === this.decodedValue ? 0 : 1;
+        this.decodedValue = text;
+        return changed;
     }
 
     getEncodedBytes() {
@@ -77,14 +92,23 @@ export class BinaryDcpEntry {
             ? this.inlineFieldBytes.slice()
             : this.rawBytes.slice();
     }
+
+    getEncodedCount() {
+        return this.patchedCount ?? this.count;
+    }
+
+    getEncodedByteLength() {
+        return this.getEncodedBytes().length;
+    }
 }
 
 export class BinaryDcpDocument {
-    constructor({ arrayBuffer, littleEndian, magic, ifdOffsets, entries }) {
+    constructor({ arrayBuffer, littleEndian, magic, firstIfdOffset, ifdOffsets, entries }) {
         this.format = "binary";
         this.arrayBuffer = arrayBuffer;
         this.littleEndian = littleEndian;
         this.magic = magic;
+        this.firstIfdOffset = firstIfdOffset;
         this.ifdOffsets = ifdOffsets;
         this.entries = entries;
         this.groupedEntries = groupEntries(entries);
@@ -105,6 +129,7 @@ export class BinaryDcpDocument {
             arrayBuffer,
             littleEndian,
             magic,
+            firstIfdOffset,
             ifdOffsets,
             entries,
         });
@@ -115,6 +140,13 @@ export class BinaryDcpDocument {
     }
 
     serializeArrayBuffer() {
+        if (this.entries.some((entry) => entry.patchedBytes && (
+            entry.getEncodedByteLength() !== entry.byteLength ||
+            entry.getEncodedCount() !== entry.count
+        ))) {
+            return appendPatchedValues(this);
+        }
+
         const output = this.arrayBuffer.slice(0);
         const bytes = new Uint8Array(output);
 
@@ -160,12 +192,13 @@ function parseIfdChain(view, firstIfdOffset, littleEndian) {
     while (offset && !visited.has(offset)) {
         visited.add(offset);
         ifdOffsets.push(offset);
+        const ifdIndex = ifdOffsets.length - 1;
 
         const entryCount = view.getUint16(offset, littleEndian);
         const tableStart = offset + 2;
         for (let index = 0; index < entryCount; index += 1) {
             const entryOffset = tableStart + (index * 12);
-            entries.push(parseIfdEntry(view, entryOffset, littleEndian));
+            entries.push(parseIfdEntry(view, entryOffset, littleEndian, ifdIndex));
         }
 
         offset = view.getUint32(tableStart + (entryCount * 12), littleEndian);
@@ -174,7 +207,7 @@ function parseIfdChain(view, firstIfdOffset, littleEndian) {
     return { ifdOffsets, entries };
 }
 
-function parseIfdEntry(view, entryOffset, littleEndian) {
+function parseIfdEntry(view, entryOffset, littleEndian, ifdIndex) {
     const tagId = view.getUint16(entryOffset, littleEndian);
     const typeId = view.getUint16(entryOffset + 2, littleEndian);
     const count = view.getUint32(entryOffset + 4, littleEndian);
@@ -209,6 +242,7 @@ function parseIfdEntry(view, entryOffset, littleEndian) {
         tagId,
         typeId,
         count,
+        entryOffset,
         byteLength,
         inline,
         inlineFieldOffset,
@@ -216,6 +250,7 @@ function parseIfdEntry(view, entryOffset, littleEndian) {
         valueOffset,
         rawBytes,
         littleEndian,
+        ifdIndex,
         valueKind: decoded.kind,
         decodedValue: decoded.value,
     });
@@ -247,6 +282,18 @@ function decodeEntryValue({ key, tagId, typeId, count, rawBytes, littleEndian })
         kind: "numbers",
         value: decodeNumericValues(rawBytes, typeId, count, littleEndian),
     };
+}
+
+function encodeTextValue(typeId, text) {
+    const encodedText = new TextEncoder().encode(String(text));
+    if (typeId === 2) {
+        const output = new Uint8Array(encodedText.length + 1);
+        output.set(encodedText, 0);
+        output[output.length - 1] = 0;
+        return output;
+    }
+
+    return encodedText;
 }
 
 function decodeNumericValues(rawBytes, typeId, count, littleEndian) {
@@ -602,4 +649,130 @@ function greatestCommonDivisor(a, b) {
         [left, right] = [right, left % right];
     }
     return left || 1;
+}
+
+function alignEven(value) {
+    return value + (value % 2);
+}
+
+function appendPatchedValues(document) {
+    const variableEntries = document.entries.filter((entry) => entry.patchedBytes && (
+        entry.getEncodedByteLength() !== entry.byteLength ||
+        entry.getEncodedCount() !== entry.count
+    ));
+    let cursor = document.arrayBuffer.byteLength;
+    const appendOffsets = new Map();
+
+    variableEntries.forEach((entry) => {
+        if (entry.getEncodedByteLength() <= 4) {
+            appendOffsets.set(entry, null);
+            return;
+        }
+
+        const offset = alignEven(cursor);
+        appendOffsets.set(entry, offset);
+        cursor = offset + entry.getEncodedByteLength();
+    });
+
+    const output = new Uint8Array(cursor);
+    output.set(new Uint8Array(document.arrayBuffer), 0);
+    const view = new DataView(output.buffer);
+
+    document.entries.forEach((entry) => {
+        const patch = entry.patchedBytes;
+        if (!patch) {
+            return;
+        }
+
+        view.setUint32(entry.entryOffset + 4, entry.getEncodedCount(), document.littleEndian);
+
+        if (entry.getEncodedByteLength() <= 4) {
+            output.fill(0, entry.inlineFieldOffset, entry.inlineFieldOffset + 4);
+            output.set(patch, entry.inlineFieldOffset);
+            return;
+        }
+
+        const offset = appendOffsets.has(entry) ? appendOffsets.get(entry) : entry.valueOffset;
+        view.setUint32(entry.entryOffset + 8, offset, document.littleEndian);
+        output.set(patch, offset);
+    });
+
+    return output.buffer;
+}
+
+function rebuildArrayBuffer(document) {
+    const groups = groupEntriesByIfd(document.entries);
+    const tableSizes = groups.map((entries) => 2 + (entries.length * 12) + 4);
+    const tableOffsets = [];
+    let cursor = document.firstIfdOffset;
+
+    tableSizes.forEach((size) => {
+        tableOffsets.push(cursor);
+        cursor += size;
+    });
+
+    const payloads = [];
+    groups.forEach((entries, ifdIndex) => {
+        entries.forEach((entry) => {
+            const bytes = entry.getEncodedBytes();
+            const size = bytes.length;
+            const payload = {
+                entry,
+                ifdIndex,
+                bytes,
+                count: entry.getEncodedCount(),
+                size,
+                offset: size <= 4 ? null : alignEven(cursor),
+            };
+            if (payload.offset !== null) {
+                cursor = payload.offset + size;
+            }
+            payloads.push(payload);
+        });
+    });
+
+    const output = new Uint8Array(cursor);
+    const prefixBytes = new Uint8Array(document.arrayBuffer, 0, document.firstIfdOffset);
+    output.set(prefixBytes, 0);
+    const view = new DataView(output.buffer);
+
+    groups.forEach((entries, ifdIndex) => {
+        const ifdOffset = tableOffsets[ifdIndex];
+        const nextIfdOffset = ifdIndex + 1 < tableOffsets.length ? tableOffsets[ifdIndex + 1] : 0;
+        view.setUint16(ifdOffset, entries.length, document.littleEndian);
+
+        entries.forEach((entry, entryIndex) => {
+            const descriptor = payloads.find((item) => item.entry === entry);
+            const entryOffset = ifdOffset + 2 + (entryIndex * 12);
+            view.setUint16(entryOffset, entry.tagId, document.littleEndian);
+            view.setUint16(entryOffset + 2, entry.typeId, document.littleEndian);
+            view.setUint32(entryOffset + 4, descriptor.count, document.littleEndian);
+
+            if (descriptor.size <= 4) {
+                output.fill(0, entryOffset + 8, entryOffset + 12);
+                output.set(descriptor.bytes, entryOffset + 8);
+            } else {
+                view.setUint32(entryOffset + 8, descriptor.offset, document.littleEndian);
+                output.set(descriptor.bytes, descriptor.offset);
+            }
+        });
+
+        view.setUint32(ifdOffset + 2 + (entries.length * 12), nextIfdOffset, document.littleEndian);
+    });
+
+    return output.buffer;
+}
+
+function groupEntriesByIfd(entries) {
+    const groups = [];
+
+    entries.forEach((entry) => {
+        const index = entry.ifdIndex || 0;
+        if (!groups[index]) {
+            groups[index] = [];
+        }
+        groups[index].push(entry);
+    });
+
+    return groups;
 }

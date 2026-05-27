@@ -1,7 +1,8 @@
 import { parseDcpDocument } from "./dcp/formats/document-factory.js";
+import { applyOutputPostfix, buildOutputFilename, DEFAULT_OUTPUT_POSTFIX } from "./dcp/core/output-naming.js";
 import { createOffsetReport } from "./dcp/transform/offset-engine.js";
 
-const BUILD_ID = "20260522-3";
+const BUILD_ID = "20260527-1";
 
 function readFileAsArrayBuffer(file) {
     return new Promise((resolve, reject) => {
@@ -21,14 +22,6 @@ function downloadBlob(filename, blob) {
     anchor.click();
     anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
-}
-
-function buildOutputFilename(file) {
-    if (!file || !file.name) {
-        return "offset-style.dcp";
-    }
-
-    return file.name.replace(/(\.[^.]+)?$/u, "-offset$1");
 }
 
 function setFilenameLabel(node, file) {
@@ -112,6 +105,7 @@ function bindUi() {
     const file1 = document.getElementById("dcp-file-1");
     const file2 = document.getElementById("dcp-file-2");
     const file3 = document.getElementById("dcp-file-3");
+    const postfixInput = document.getElementById("output-postfix");
     const name1 = document.getElementById("dcp-name-1");
     const name2 = document.getElementById("dcp-name-2");
     const name3 = document.getElementById("dcp-name-3");
@@ -150,6 +144,8 @@ function bindUi() {
             const styleDoc = parseDcpDocument(buffers[1]);
             const targetDoc = parseDcpDocument(buffers[2]);
             const report = createOffsetReport(baseDoc, styleDoc, targetDoc);
+            const postfix = postfixInput ? postfixInput.value : DEFAULT_OUTPUT_POSTFIX;
+            applyOutputPostfix(report.outputDocument, postfix);
             const summary = report.summary;
             const outputDelta = measureOutputDelta(report.outputDocument);
 
@@ -172,7 +168,7 @@ function bindUi() {
                 console.warn("DCP offset completed with partial coverage.", summary);
             }
 
-            downloadBlob(buildOutputFilename(files[2]), report.outputDocument.toBlob());
+            downloadBlob(buildOutputFilename(files[2], postfix), report.outputDocument.toBlob());
         } catch (error) {
             console.error("Failed to generate offset DCP.", error);
             alert(`Failed to generate offset DCP: ${error && error.message ? error.message : String(error)}`);

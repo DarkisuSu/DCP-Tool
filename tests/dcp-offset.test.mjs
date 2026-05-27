@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 
+import { applyOutputPostfix, buildOutputFilename } from "../js/dcp/core/output-naming.js";
 import { CAMERA_PROFILE_MAGIC } from "../js/dcp/core/schema.js";
 import { parseDcpDocument } from "../js/dcp/formats/document-factory.js";
 import { createOffsetReport } from "../js/dcp/transform/offset-engine.js";
@@ -10,6 +11,8 @@ const LITTLE_ENDIAN = true;
 runTextFixture();
 runBinaryFixture();
 runDegenerateFixture();
+runOutputNamingFixture();
+runMissingFieldsFixture();
 
 console.log("ok");
 
@@ -71,7 +74,7 @@ function runTextFixture() {
     assert.match(output, /ProfileToneCurve = 0 0 0\.5 0\.7 1 1/u);
     assert.match(output, /ProfileHueSatMapData1 = 15 1\.2 0\.8 -10 0\.9 1\.1/u);
     assert.match(output, /ProfileHueSatMapData3 = 25 1\.15 0\.85 -4 0\.95 1\.08/u);
-    assert.match(output, /ProfileLookTableEncoding = 1/u);
+    assert.match(output, /ProfileLookTableEncoding = 0/u);
     assert.match(output, /ProfileGainTableMap = 1 1 1 1 0 0 2 0\.333333 0\.333333 0\.333333 0 0 1\.26 1\.333333/u);
     assert.match(output, /ProfileCopyright = Keep Target/u);
 }
@@ -157,10 +160,10 @@ function runBinaryFixture() {
     assertApproximatelyEqual(baselineExposure[0], 0.3, 1e-6);
 
     const hueSatEncoding = readNumbers(reparsed, "profilehuesatmapencoding");
-    assert.equal(hueSatEncoding[0], 1);
+    assert.equal(hueSatEncoding[0], 0);
 
     const lookEncoding = readNumbers(reparsed, "profilelooktableencoding");
-    assert.equal(lookEncoding[0], 1);
+    assert.equal(lookEncoding[0], 0);
 
     const gainMap = reparsed.findEntries("profilegaintablemap")[0].getGainMap();
     assert.ok(gainMap);
@@ -209,6 +212,111 @@ function runDegenerateFixture() {
     assert.doesNotMatch(output, /ProfileLookTableData = 5 0 1 15 0 1/u);
 }
 
+function runOutputNamingFixture() {
+    assert.equal(buildOutputFilename({ name: "Sony ST.dcp" }, "_offset"), "Sony ST_offset.dcp");
+
+    const textDoc = parseDcpDocument(encoder.encode("ProfileName = Camera ST\n").buffer);
+    const textChanged = applyOutputPostfix(textDoc, "_offset");
+    assert.equal(textChanged, 1);
+    assert.match(textDoc.serialize(), /ProfileName = Camera ST_offset/u);
+
+    const binaryBuffer = buildBinaryProfile({
+        profileName: "Camera ST",
+        extraTags: [{ id: 65000, type: 7, value: new Uint8Array([9, 8, 7, 6, 5]) }],
+        colorMatrix: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+        whitePoint: [0.3127, 0.329],
+        toneCurve: [0, 0, 0.5, 0.5, 1, 1],
+        hueSatMap: [0, 1, 1, 0, 1, 1],
+        hueSatMap3: [0, 1, 1, 0, 1, 1],
+        lookTable: [0, 1, 1, 0, 1, 1],
+        baselineExposure: 0.1,
+        gainMap: [1, 1.2],
+        hueSatEncoding: 0,
+        lookEncoding: 0,
+        copyright: "Keep Base",
+    });
+    const binaryDoc = parseDcpDocument(binaryBuffer);
+    const binaryChanged = applyOutputPostfix(binaryDoc, "_offset");
+    assert.equal(binaryChanged, 1);
+    const renamedBuffer = binaryDoc.serializeArrayBuffer();
+    assert.equal(renamedBuffer.byteLength > binaryBuffer.byteLength, true);
+    const reparsed = parseDcpDocument(renamedBuffer);
+    assert.equal(reparsed.findEntries("profilename")[0].decodedValue, "Camera ST_offset");
+    const unknownEntry = reparsed.findEntries("tag65000")[0];
+    assert.ok(unknownEntry);
+    assert.equal(unknownEntry.valueKind, "bytes");
+    assert.deepEqual(Array.from(unknownEntry.decodedValue), [9, 8, 7, 6, 5]);
+}
+
+function runMissingFieldsFixture() {
+    // Test Case 1: DCP1 missing, DCP2 present -> Overwrite with DCP2
+    const baseDocument1 = [
+        "ColorMatrix1 = 1 0 0 0 1 0 0 0 1",
+        "ProfileCopyright = Keep Target",
+        "",
+    ].join("\n");
+
+    const styleDocument1 = [
+        "ColorMatrix1 = 2 0 0 0 2 0 0 0 2",
+        "BaselineExposure = 0.5",
+        "ProfileToneCurve = 0 0 0.5 0.7 1 1",
+        "ProfileCopyright = Keep Style",
+        "",
+    ].join("\n");
+
+    const targetDocument1 = [
+        "ColorMatrix1 = 1 0 0 0 1 0 0 0 1",
+        "BaselineExposure = 0.1",
+        "ProfileToneCurve = 0 0 0.5 0.5 1 1",
+        "ProfileCopyright = Keep Target",
+        "",
+    ].join("\n");
+
+    const baseDoc1 = parseDcpDocument(encoder.encode(baseDocument1).buffer);
+    const styleDoc1 = parseDcpDocument(encoder.encode(styleDocument1).buffer);
+    const targetDoc1 = parseDcpDocument(encoder.encode(targetDocument1).buffer);
+    const report1 = createOffsetReport(baseDoc1, styleDoc1, targetDoc1);
+    const output1 = report1.outputDocument.serialize();
+
+    // BaselineExposure & ProfileToneCurve should be directly overwritten to style values (0.5 and 0.5 0.7 1 1)
+    assert.match(output1, /BaselineExposure = 0\.5/u);
+    assert.match(output1, /ProfileToneCurve = 0 0 0\.5 0\.7 1 1/u);
+    // ProfileCopyright should remain exactly "Keep Target" (since it's a non-pixel field)
+    assert.match(output1, /ProfileCopyright = Keep Target/u);
+
+    // Test Case 2: DCP2 missing -> Identity transform (Keep DCP3 as-is)
+    const baseDocument2 = [
+        "ColorMatrix1 = 1 0 0 0 1 0 0 0 1",
+        "BaselineExposure = 0.2",
+        "ProfileCopyright = Keep Target",
+        "",
+    ].join("\n");
+
+    const styleDocument2 = [
+        "ColorMatrix1 = 2 0 0 0 2 0 0 0 2",
+        "ProfileCopyright = Keep Style",
+        "",
+    ].join("\n");
+
+    const targetDocument2 = [
+        "ColorMatrix1 = 1 0 0 0 1 0 0 0 1",
+        "BaselineExposure = 0.15",
+        "ProfileCopyright = Keep Target",
+        "",
+    ].join("\n");
+
+    const baseDoc2 = parseDcpDocument(encoder.encode(baseDocument2).buffer);
+    const styleDoc2 = parseDcpDocument(encoder.encode(styleDocument2).buffer);
+    const targetDoc2 = parseDcpDocument(encoder.encode(targetDocument2).buffer);
+    const report2 = createOffsetReport(baseDoc2, styleDoc2, targetDoc2);
+    const output2 = report2.outputDocument.serialize();
+
+    // BaselineExposure should remain exactly 0.15 (unchanged) since it was missing in styleDoc2
+    assert.match(output2, /BaselineExposure = 0\.15/u);
+    // ProfileCopyright should remain exactly "Keep Target"
+    assert.match(output2, /ProfileCopyright = Keep Target/u);
+}
+
 function createTextDocument(profile) {
     return [
         `ColorMatrix1 = ${profile.colorMatrix.join(" ")}`,
@@ -230,6 +338,8 @@ function createTextDocument(profile) {
 
 function buildBinaryProfile(profile) {
     const tags = [
+        ...(profile.extraTags || []),
+        ...(profile.profileName ? [{ id: 50936, type: 2, value: profile.profileName }] : []),
         { id: 50721, type: 10, value: profile.colorMatrix },
         { id: 50729, type: 5, value: profile.whitePoint },
         { id: 50730, type: 10, value: [profile.baselineExposure] },

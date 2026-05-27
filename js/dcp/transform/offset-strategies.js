@@ -28,8 +28,6 @@ export function transformEntry({ baseDoc, styleDoc, targetDoc, baseEntry, styleE
             return applyAdditive(baseEntry, styleEntry, targetEntry);
         case STRATEGY.CHANNEL_RATIO:
             return applyPositiveRatio(baseEntry, styleEntry, targetEntry);
-        case STRATEGY.COPY_STYLE:
-            return applyCopyStyle(baseEntry, styleEntry, targetEntry);
         case STRATEGY.GAIN_MAP:
             return applyGainMapOffset(baseEntry, styleEntry, targetEntry);
         case STRATEGY.HSV_TABLE:
@@ -47,6 +45,44 @@ export function transformEntry({ baseDoc, styleDoc, targetDoc, baseEntry, styleE
         default:
             return null;
     }
+}
+
+export function copyEntryValue(styleEntry, targetEntry) {
+    if (targetEntry.valueKind === "gain_map") {
+        const gainMap = styleEntry.getGainMap();
+        if (gainMap) {
+            const changed = targetEntry.setGainMap(gainMap, buildSampleSets(null, styleEntry, targetEntry));
+            return changed === null ? null : changed;
+        }
+    }
+
+    const styleValues = styleEntry.getNumericValues();
+    if (styleValues) {
+        const changed = targetEntry.setNumericValues(styleValues, buildSampleSets(null, styleEntry, targetEntry));
+        return changed === null ? null : changed;
+    }
+
+    if (typeof targetEntry.setRawValue === "function" && typeof styleEntry.getSerializedValue === "function") {
+        return targetEntry.setRawValue(styleEntry.getSerializedValue());
+    }
+
+    if (typeof targetEntry.setTextValue === "function" && styleEntry.valueKind === "text") {
+        return targetEntry.setTextValue(styleEntry.decodedValue);
+    }
+
+    if (styleEntry.patchedBytes) {
+        targetEntry.patchedBytes = styleEntry.patchedBytes.slice();
+        targetEntry.patchedCount = styleEntry.getEncodedCount();
+        return 1;
+    }
+
+    if (styleEntry.rawBytes) {
+        targetEntry.patchedBytes = styleEntry.rawBytes.slice();
+        targetEntry.patchedCount = styleEntry.count;
+        return 1;
+    }
+
+    return 0;
 }
 
 function applyAdditive(baseEntry, styleEntry, targetEntry) {
@@ -82,19 +118,6 @@ function applyPositiveRatio(baseEntry, styleEntry, targetEntry) {
     }
 
     return setNumericOutput(baseEntry, styleEntry, targetEntry, outputValues);
-}
-
-function applyCopyStyle(baseEntry, styleEntry, targetEntry) {
-    const styleValues = styleEntry.getNumericValues();
-    if (styleValues) {
-        return setNumericOutput(baseEntry, styleEntry, targetEntry, styleValues);
-    }
-
-    if (typeof targetEntry.setRawValue === "function" && typeof styleEntry.getSerializedValue === "function") {
-        return targetEntry.setRawValue(styleEntry.getSerializedValue());
-    }
-
-    return null;
 }
 
 function applyMatrixOffset(baseEntry, styleEntry, targetEntry) {
@@ -202,7 +225,7 @@ function applyHsvTableOffset({ baseDoc, styleDoc, targetDoc, baseEntry, styleEnt
     }
 
     const isLookTable = targetEntry.normalizedKey === "profilelooktabledata";
-    const outputEncoding = readEncodingMode(styleDoc, schema.encodingKey);
+    const outputEncoding = readEncodingMode(targetDoc, schema.encodingKey);
     const baseEncoding = readEncodingMode(baseDoc, schema.encodingKey);
     const styleEncoding = readEncodingMode(styleDoc, schema.encodingKey);
     const targetEncoding = readEncodingMode(targetDoc, schema.encodingKey);
@@ -301,12 +324,16 @@ function sameLength(...arrays) {
 }
 
 function buildSampleSets(baseEntry, styleEntry, targetEntry) {
-    if (!("numbers" in targetEntry) || !("numbers" in baseEntry) || !("numbers" in styleEntry)) {
+    if (!targetEntry || !styleEntry) {
         return [];
     }
+    if (!("numbers" in targetEntry) || !("numbers" in styleEntry)) {
+        return [];
+    }
+    const hasBase = baseEntry && ("numbers" in baseEntry);
 
     return targetEntry.numbers.map((_, index) => [
-        baseEntry.numbers[index] ? baseEntry.numbers[index].raw : "",
+        hasBase && baseEntry.numbers[index] ? baseEntry.numbers[index].raw : "",
         styleEntry.numbers[index] ? styleEntry.numbers[index].raw : "",
         targetEntry.numbers[index] ? targetEntry.numbers[index].raw : "",
     ]);

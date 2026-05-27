@@ -177,9 +177,6 @@ function parseXmlEntries(text) {
         const key = match[2];
         const rawValue = match[3];
         const numbers = extractNumbers(rawValue);
-        if (numbers.length === 0) {
-            return;
-        }
 
         const valueOffset = lineInfo.text.indexOf(rawValue);
         entries.push(new TextDcpEntry({
@@ -214,10 +211,6 @@ function parseLineEntries(text, blockedRanges) {
         }
 
         const numbers = extractNumbers(rawValue);
-        if (numbers.length === 0) {
-            return;
-        }
-
         entries.push(new TextDcpEntry({
             key,
             rawValue,
